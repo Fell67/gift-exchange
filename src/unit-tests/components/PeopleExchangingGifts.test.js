@@ -1,38 +1,59 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { createTestingPinia } from "@pinia/testing"
 
 import PeopleExchangingGifts from "@/components/content/PeopleExchangingGifts.vue"
 
-// create a new wrapper and return it
-function createWrapper () {
+const componentStubs = {
+    "v-col": { template: "<div><slot /></div>" },
+    "v-row": { template: "<div><slot /></div>" },
+    "v-card-actions": { template: "<div><slot /></div>" },
+    "v-spacer": { template: "<span />" },
+    "v-btn": { template: "<button><slot /></button>" }
+}
+
+function createWrapper (peopleAttending = []) {
     return mount(PeopleExchangingGifts, {
         plugins: [
             createTestingPinia({
                 createSpy: vi.fn,
-                stubActions: true
+                stubActions: false,
+                initialState: { peopleAttending: { peopleAttending } }
             })
-        ]
+        ],
+        global: { stubs: componentStubs }
     })
 }
 
-describe("Testing the PeopleExchangingGifts component", () => {
-    // Testing that when the continue button is clicked the component emits a goToDifferentPage event with "continue"
-    it("Testing that when the continue button is clicked the component emits a goToDifferentPage event with 'continue'", () => {
-        let wrapper = createWrapper()
-        wrapper.find("#continue-button").trigger("click")
-        expect(wrapper.emitted("goToDifferentPage")[0]).toEqual(["continue"])
-    }),
-    // Testing that when the go back button is clicked the component emits a goToDifferentPage event with "goBack"
-    it("Testing that when the go back button is clicked the component emits a goToDifferentPage event with 'goBack'", () => {
-        let wrapper = createWrapper()
-        wrapper.find("#go-back-button").trigger("click")
-        expect(wrapper.emitted("goToDifferentPage")[0]).toEqual(["goBack"])
-    }),
-    // Testing that when goToDifferentPage gets an invalid direction that it returns an error
-    it("Testing that when the go back button is clicked the component emits a goToDifferentPage event with 'goBack'", () => {
-        let wrapper = createWrapper()
-        let response = wrapper.vm.goToDifferentPage("badDirection")
-        expect(response).toContain("Error")
+afterEach(() => {
+    vi.restoreAllMocks()
+})
+
+describe("PeopleExchangingGifts", () => {
+    it("clears the attendees and emits continue when starting another exchange", async () => {
+        const people = [{ name: "Jon", edit: false, editName: "Jon", nameDrawn: "Jane" }]
+        const wrapper = createWrapper(people)
+
+        await wrapper.find("#continue-button").trigger("click")
+
+        expect(wrapper.vm.peopleAttending).toEqual([])
+        expect(wrapper.emitted("goToDifferentPage")).toEqual([["continue"]])
+    })
+
+    it("preserves attendees when navigating back", async () => {
+        const people = [{ name: "Jon", edit: false, editName: "Jon", nameDrawn: "Jane" }]
+        const wrapper = createWrapper(people)
+
+        await wrapper.find("#go-back-button").trigger("click")
+
+        expect(wrapper.vm.peopleAttending).toHaveLength(1)
+        expect(wrapper.emitted("goToDifferentPage")).toEqual([["goBack"]])
+    })
+
+    it("returns an error for an invalid navigation direction", () => {
+        vi.spyOn(console, "error").mockImplementation(() => {})
+        const wrapper = createWrapper()
+
+        expect(wrapper.vm.goToDifferentPage("badDirection")).toBe("Error in PeopleExchangingGifts: badDirection is invalid")
     })
 })

@@ -1,5 +1,4 @@
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
-import path from 'path'
 import viteConfig from './vite.config'
 import tsconfigPaths from 'vite-tsconfig-paths'
 

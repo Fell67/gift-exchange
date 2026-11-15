@@ -3,6 +3,9 @@ on:
   # Allows me to trigger it from the UI
   workflow_dispatch:
   # Triggers the workflow on a push or pull request
+  push:
+    branches:
+      - main
   pull_request:
 
 # This modifies the default permissions granted to GITHUB_TOKEN. 
