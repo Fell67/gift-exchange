@@ -1,3 +1,5 @@
+name: CI
+
 # Controls when the workflow will run
 on:
   # Allows me to trigger it from the UI
@@ -8,11 +10,10 @@ on:
       - main
   pull_request:
 
-# This modifies the default permissions granted to GITHUB_TOKEN. 
-# This will vary depending on the needs of your workflow. 
-permissions: write-all
+permissions:
+  contents: read
 
-# Here are the jobs that run for hte workflow
+# Here are the jobs that run for the workflow
 jobs:
   CI-CD_pipeline:
     # The type of runner that the job will run on
@@ -34,12 +35,9 @@ jobs:
       # Unit Test
       - name: Unit Test
         run: npm run unit-test
-      # If on the main branch deploy the code
-      - name: Deploy
-        if: github.ref == 'refs/heads/main'
-        run: |
-         git config --global user.email "${{ secrets.EMAIL }}"
-         git config --global user.name "${{ secrets.USERNAME }}"
-         git --work-tree dist add --all
-         git --work-tree dist commit -m 'Deploy'
-         git push origin HEAD:giftExchangeWebsite --force
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-build
+          path: dist/
+          if-no-files-found: error
