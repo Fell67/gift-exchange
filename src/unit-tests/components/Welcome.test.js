@@ -1,56 +1,69 @@
-import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { flushPromises, mount } from "@vue/test-utils"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import Welcome from "@/components/content/Welcome.vue"
-import { marked } from "marked"
-import { mangle } from "marked-mangle"
-import { gfmHeadingId } from "marked-gfm-heading-id"
 
-const readMe = new URL("README.md", "https://fell67.github.io/giftExchange/")
-
-// create a new wrapper and return it
 function createWrapper () {
-    return mount(Welcome, {})
-}
-
-// Create the html that would be made from the readMe file to compare with the function
-async function createTestReadMeHTML () {
-    const options = {
-        prefix: "readMe-",
-    };
-    marked.use(gfmHeadingId(options));
-    marked.use(mangle())
-
-    let text = await fetch(readMe).then( (response) => {
-        if (!response.ok) {
-            console.error("Error when trying to load README. Status: " + response.status)
-            return "Error when trying to load README. Status: " + response.status
-        } else {
-            return response.text()
+    return mount(Welcome, {
+        global: {
+            stubs: {
+                "v-card-actions": { template: "<div><slot /></div>" },
+                "v-spacer": { template: "<span />" },
+                "v-btn": { template: "<button><slot /></button>" }
+            }
         }
     })
-
-    return marked(text)
 }
 
-describe("Testing the Welcome component", () => {
-    // Test that the readme can load correctly
-    it("Test that the readme can load correctly", async () => {
-        let wrapper = createWrapper()
-        let readMeFromTest = await createTestReadMeHTML()
-        let readMeFromMethod = await wrapper.vm.markdownToHtml(readMe)
-        expect(readMeFromMethod).to.equal(readMeFromTest)
-    }),
-    // Test that the markdownToHtml throws an error when given a bad url
-    it("Test that the markdownToHtml throws an error when given a bad url", async () => {
-        let wrapper = createWrapper()
-        let readMeFromMethod = await wrapper.vm.markdownToHtml(new URL("badurl.md", "https://fell67.github.io/giftExchange/"))
-        expect(readMeFromMethod).toContain("Error")
-    }),
-    // Testing that when the continue button is clicked the component emits a goToDifferentPage event with "continue"
-    it("Testing that when the continue button is clicked the component emits a goToDifferentPage event with 'continue'", () => {
-        let wrapper = createWrapper()
-        wrapper.find("#continue-button").trigger("click")
-        expect(wrapper.emitted('goToDifferentPage')[0]).toEqual(["continue"])
+afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+})
+
+describe("Welcome", () => {
+    it("loads and renders the README as Markdown", async () => {
+        const markdown = "# Holiday Exchange\n\nAdd your gift ideas here."
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve(markdown)
+        })
+        vi.stubGlobal("fetch", fetchMock)
+
+        const wrapper = createWrapper()
+        await flushPromises()
+
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+        expect(fetchMock).toHaveBeenCalledWith(expect.any(URL))
+        expect(wrapper.find("h1#readMe-holiday-exchange").text()).toBe("Holiday Exchange")
+        expect(wrapper.text()).toContain("Add your gift ideas here.")
+        expect(wrapper.html()).not.toContain("# Holiday Exchange")
+    })
+
+    it("renders an error message when the README request is unsuccessful", async () => {
+        const errorMessage = "Error when trying to load README. Status: 503"
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: false,
+            status: 503
+        })
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+        vi.stubGlobal("fetch", fetchMock)
+
+        const wrapper = createWrapper()
+        await flushPromises()
+
+        expect(wrapper.text()).toContain(errorMessage)
+        expect(consoleError).toHaveBeenCalledWith(errorMessage)
+    })
+
+    it("emits goToDifferentPage with 'continue' when Continue is clicked", async () => {
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve("")
+        }))
+
+        const wrapper = createWrapper()
+        await wrapper.find("#continue-button").trigger("click")
+
+        expect(wrapper.emitted("goToDifferentPage")).toEqual([["continue"]])
     })
 })

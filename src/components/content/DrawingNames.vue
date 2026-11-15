@@ -97,6 +97,7 @@ export default {
                   } else {
                     this.updateNameDrawn(person, this.namesToDraw[0].name)
                   }
+                  this.namesToDraw.splice(0, 1)
                 }
             }
         },
