@@ -20,7 +20,7 @@
       color="primary"
     >
       <v-card-text
-        style="padding: 1rem;"
+        class="text-area"
       >
         <v-switch
           v-model="theme"
@@ -64,3 +64,15 @@
       }
   }
 </script>
+
+<style scoped>
+  .text-area {
+    padding: 1rem 25rem;
+  }
+
+  @media screen and (max-width: 1255px) {
+    .text-area {
+      padding: 1rem;
+    } 
+  }
+</style>
